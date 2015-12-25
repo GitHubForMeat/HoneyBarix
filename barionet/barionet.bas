@@ -32,6 +32,6 @@ ENDIF
 
 GOTO 100
 
-ENDIF
+END               'EOF
 
-'EOF
+
