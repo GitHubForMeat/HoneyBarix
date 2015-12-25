@@ -1,16 +1,16 @@
 '===============================================================================
-' BARIX Barionet BCL Application (C)2015, Written by pc
+' BARIX Barionet BCL Application (C)2015, Written by ME
 '===============================================================================
 
 ' ------------------------------------------------------------------------------
 ' INIT: Version handling
 ' ------------------------------------------------------------------------------
 
- DIM VERS$(15) ' string
+ DIM vers$(15) ' string
  DIM anap4  ' integer variable
  
- VERS$="01.01 20151220"   ' Version of Main Application
- SYSLOG "Analog "+VERS$, 1
+ vers$="01.02 20151225"   ' Version of Main Application
+ SYSLOG "Analog "+vers$, 1
 
 
  
@@ -18,9 +18,9 @@
 ' MAIN: Main program loop
 '===============================================================================
 
-100 'Main Program
-DELAY 100 ' 1000ms delay
-anap4=IOSTATE(504) ' Read analog input #4 
+100 				'Main Program
+DELAY 100 			'1000ms delay
+anap4=IOSTATE(504) 	' Read analog input #4 
 
 IF anap4>750 THEN 
   IOCTL  211, 1
@@ -30,8 +30,8 @@ ELSE
   IOCTL 211, 0
 ENDIF
 
-GoTo 100
+GOTO 100
 
+ENDIF
 
-End
 'EOF
