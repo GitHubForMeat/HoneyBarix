@@ -43,7 +43,7 @@
  DIM msnow     ' Holds current time in milliseconds, rolls over every 49 days
                ' Note: currently do not have a roll over condition handler
 
- VERS$="01.0A 20160108"   ' Version of Main Application
+ VERS$="01.0B 20160109"   ' Version of Main Application
  SYSLOG "Analog "+VERS$, 1
 
 '===============================================================================
@@ -78,8 +78,9 @@ GOTO 100
 3000
   IF anap3>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 213, 1          ' Set the virtual digital register HIGH (rec)
-    if OR(IOSTATE(205)<>0,IOSTATE(206)<>0) THEN
-      IOCTL 214, 1
+    IOCTL 1, 1            ' Set RELAY 1 = ON
+    if AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
+      IOCTL 214, 1        ' Set virtual bit high (send email) 
     ENDIF
     delay3=5000+msnow     ' Add 1 second to delay
         stateA3=1         ' Change the state to 1
@@ -94,6 +95,7 @@ RETURN
 3100 ' stateA3 = high
   IF AND(anap4<=750,msnow>delay3) THEN  ' Check voltage is low for > 5 seconds
     IOCTL 213, 0              ' Set the virtual digital register LOW
+    IOCTL 1, 1                ' Set RELAY 1 = OFF
     IOCTL 214, 0
     stateA3=0                 ' Change the state to 0
     SYSLOG "LO ANALOG IN 3="+STR$(anap3)
@@ -105,6 +107,7 @@ RETURN
   ENDIF
 RETURN
 
+
 '===============================================================================
 ' 4000: State Machine 4 = 0
 '===============================================================================
@@ -112,7 +115,7 @@ RETURN
 4000
   IF anap4>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 211, 1          ' Set the virtual digital register HIGH
-    if OR(IOSTATE(205)<>0,IOSTATE(206)<>0) THEN
+    if AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
       IOCTL 212, 1
     ENDIF
     delay4=1000+msnow     ' Add 1 second to delay
