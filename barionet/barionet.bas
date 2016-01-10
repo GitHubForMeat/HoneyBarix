@@ -19,7 +19,8 @@
 
 ' Barionet 100  Milestone  Description
 ' ------------  ---------  ---------------------
-' 002           Output 6   Barix relay 2
+' 002           Output 6   Barix relay 2 - Zone is wired to NO and COM in case
+'                                          Barix loses power, zone will open
 ' 101                      Digital Output 1
 ' 102                      Digital Ouput 2
 ' 103                      Digital Ouput 3
@@ -43,7 +44,7 @@
  DIM msnow     ' Holds current time in milliseconds, rolls over every 49 days
                ' Note: currently do not have a roll over condition handler
 
- VERS$="01.0B 20160109"   ' Version of Main Application
+ VERS$="01.0D 20160109"   ' Version of Main Application
  SYSLOG "Analog "+VERS$, 1
 
 '===============================================================================
@@ -51,6 +52,7 @@
 '===============================================================================
 
  DELAY 250            ' Quarter seconds delay on bootup
+ IOCTL 2, 1           ' Set RELAY 2 = ON
  IOCTL 211, 0         ' Set Barix virtual IO register 211 = 0
  IOCTL 212, 0         ' Set Barix virtual IO register 212 = 0
  IOCTL 213, 0         ' Set Barix virtual IO register 213 = 0
@@ -61,14 +63,11 @@
 '===============================================================================
 
 100 'Main Program
-
-anap3=IOSTATE(503) ' Read analog input #3
-anap4=IOSTATE(504) ' Read analog input #4
-msnow=_TMR_(0)     ' Update current time variable
-IF stateA3=0 THEN GOSUB 3000 ELSE GOSUB 3100
-IF stateA4=0 THEN GOSUB 4000 ELSE GOSUB 4100
-
-
+  anap3=IOSTATE(503) ' Read analog input #3
+  anap4=IOSTATE(504) ' Read analog input #4
+  msnow=_TMR_(0)     ' Update current time variable
+  IF stateA3=0 THEN GOSUB 3000 ELSE GOSUB 3100
+  IF stateA4=0 THEN GOSUB 4000 ELSE GOSUB 4100
 GOTO 100
 
 '===============================================================================
@@ -78,12 +77,13 @@ GOTO 100
 3000
   IF anap3>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 213, 1          ' Set the virtual digital register HIGH (rec)
-    IOCTL 1, 1            ' Set RELAY 1 = ON
-    if AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
+    IOCTL 2, 0           ' Set RELAY 2 = OFF
+    IF AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
       IOCTL 214, 1        ' Set virtual bit high (send email) 
+	  SYSLOG "SEND EMAIL 3"
     ENDIF
     delay3=5000+msnow     ' Add 1 second to delay
-        stateA3=1         ' Change the state to 1
+    stateA3=1             ' Change the state to 1
     SYSLOG "HI ANALOG IN 3="+STR$(anap3)
   ENDIF
 RETURN
@@ -95,15 +95,15 @@ RETURN
 3100 ' stateA3 = high
   IF AND(anap4<=750,msnow>delay3) THEN  ' Check voltage is low for > 5 seconds
     IOCTL 213, 0              ' Set the virtual digital register LOW
-    IOCTL 1, 1                ' Set RELAY 1 = OFF
+    IOCTL 2, 1                ' Set RELAY 2 = ON
     IOCTL 214, 0
     stateA3=0                 ' Change the state to 0
     SYSLOG "LO ANALOG IN 3="+STR$(anap3)
-        delay3=0              ' Reset the delay timer
+    delay3=0                  ' Reset the delay timer
   ELSE                        ' Output is hi, but haven't passed hysteresis time
     IF anap3>750 THEN         ' Check to see if input is still high
-          delay3=5000+msnow   ' Add another second to the delay
-        ENDIF
+      delay3=5000+msnow       ' Add another second to the delay
+    ENDIF
   ENDIF
 RETURN
 
@@ -115,11 +115,12 @@ RETURN
 4000
   IF anap4>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 211, 1          ' Set the virtual digital register HIGH
-    if AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
+    IF AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
       IOCTL 212, 1
+	  SYSLOG "SEND EMAIL 4"
     ENDIF
     delay4=1000+msnow     ' Add 1 second to delay
-        stateA4=1         ' Change the state to 1
+    stateA4=1             ' Change the state to 1
     SYSLOG "HI ANALOG IN 4="+STR$(anap4)
   ENDIF
 RETURN
@@ -134,11 +135,11 @@ RETURN
     IOCTL 212, 0          ' Set the virtual digital register LOW
     stateA4=0             ' Change the state to 0
     SYSLOG "LO ANALOG IN 4="+STR$(anap4)
-        delay4=0          ' Reset the delay timer
+    delay4=0              ' Reset the delay timer
   ELSE                    ' Output is high, but haven't passed hysteresis time
     IF anap4>750 THEN     ' Check to see if input is still high
-          delay4=1000+msnow   ' Add another second to the delay
-        ENDIF
+      delay4=1000+msnow   ' Add another second to the delay
+    ENDIF
   ENDIF
 RETURN
 
