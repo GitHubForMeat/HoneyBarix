@@ -5,9 +5,9 @@
 ' Register Mapping
 ' Barionet 100  Milestone  Description           Application usage
 ' ------------  ---------  --------------------- -------------------------------
-' 001           Output 5   Barix relay 1         DW PIR Debounced output
-' 205                      Digital Input 5       Garage Door Open
-' 206                      Digital Input 6       Armed Away
+' 001           Output 5   Barix relay 1         DW PIR De-bounced output
+' 205                      Digital Input 5       Perimeter Door Open (1 = open)
+' 206                      Digital Input 6       Armed Stay/Away (1 = armed) 
 ' 211           Input 11   Virtual IO bit        camera 1 record
 ' 212           Input 12   Virtual IO bit        camera 1 record + send email
 ' 213           Input 13   Virtual IO bit        camera 5 record
@@ -16,15 +16,16 @@
 ' 504                      Analog input 4 value  PC PIR
 
 ' Unused Barionet 100 IO
+' 206 
 
 ' Barionet 100  Milestone  Description
 ' ------------  ---------  ---------------------
 ' 002           Output 6   Barix relay 2 - Zone is wired to NO and COM in case
 '                                          Barix loses power, zone will open
 ' 101                      Digital Output 1
-' 102                      Digital Ouput 2
-' 103                      Digital Ouput 3
-' 104                      Digital Ouput 4
+' 102                      Digital Output 2
+' 103                      Digital Output 3
+' 104                      Digital Output 4
 ' 207                      Digital Input 7
 ' 208                      Digital Input 8
 ' 501                      Analog input 1 value
@@ -44,20 +45,21 @@
  DIM msnow     ' Holds current time in milliseconds, rolls over every 49 days
                ' Note: currently do not have a roll over condition handler
 
- VERS$="01.0D 20160109"   ' Version of Main Application
+ VERS$="01.0e 20160429"   ' Version of Main Application
  SYSLOG "Analog "+VERS$, 1
 
 '===============================================================================
 ' INIT: Initialize
 '===============================================================================
 
- DELAY 250            ' Quarter seconds delay on bootup
+ DELAY 250            ' Quarter seconds delay on boot-up
  IOCTL 2, 1           ' Set RELAY 2 = ON
  IOCTL 211, 0         ' Set Barix virtual IO register 211 = 0
  IOCTL 212, 0         ' Set Barix virtual IO register 212 = 0
  IOCTL 213, 0         ' Set Barix virtual IO register 213 = 0
  IOCTL 214, 0         ' Set Barix virtual IO register 214 = 0
 
+ 
 '===============================================================================
 ' MAIN: Main program loop
 '===============================================================================
@@ -77,8 +79,8 @@ GOTO 100
 3000
   IF anap3>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 213, 1          ' Set the virtual digital register HIGH (rec)
-    IOCTL 2, 0           ' Set RELAY 2 = OFF
-    IF AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
+    IOCTL 2, 0            ' Set RELAY 2 = OFF
+    IF NOT(IOSTATE(205)<>0) THEN
       IOCTL 214, 1        ' Set virtual bit high (send email) 
 	  SYSLOG "SEND EMAIL 3"
     ENDIF
@@ -115,7 +117,7 @@ RETURN
 4000
   IF anap4>750 THEN       ' Check for 5V on the analog input 4
     IOCTL 211, 1          ' Set the virtual digital register HIGH
-    IF AND(NOT(IOSTATE(205)<>0),IOSTATE(206)<>0) THEN
+    IF NOT(IOSTATE(205)<>0) THEN
       IOCTL 212, 1
 	  SYSLOG "SEND EMAIL 4"
     ENDIF
@@ -142,5 +144,8 @@ RETURN
     ENDIF
   ENDIF
 RETURN
+
+
+
 
 END 'EOF
