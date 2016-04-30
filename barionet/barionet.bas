@@ -6,12 +6,15 @@
 ' Barionet 100  Milestone  Description           Application usage
 ' ------------  ---------  --------------------- -------------------------------
 ' 001           Output 5   Barix relay 1         DW PIR De-bounced output
+' 107           Output 7   Virtual IO bit        Motion on camera 11 hardwired PIR 
 ' 205                      Digital Input 5       Perimeter Door Open (1 = open)
 ' 206                      Digital Input 6       Armed Stay/Away (1 = armed) 
 ' 211           Input 11   Virtual IO bit        camera 1 record
 ' 212           Input 12   Virtual IO bit        camera 1 record + send email
 ' 213           Input 13   Virtual IO bit        camera 5 record
 ' 214           Input 14   Virtual IO bit        camera 5 record + send email
+' 215           Input 15   Virtual IO bit        camera 11 record
+' 216           Input 16   Virtual IO bit        camera 11 record + send email
 ' 503                      Analog input 3 value  DW PIR
 ' 504                      Analog input 4 value  PC PIR
 
@@ -40,12 +43,14 @@
  DIM anap4     ' holds a/d value for analog input 4
  DIM delay3    ' Time value for hysteresis, to prevent signal bouncing on output
  DIM delay4    ' Time value for hysteresis, to prevent signal bouncing on output
+ DIM delay5    ' Time value for hysteresis, to prevent signal bouncing on output
  DIM stateA3   ' State machine variable for Analog Input 3
  DIM stateA4   ' State machine variable for Analog Input 4
+ DIM stateA5   ' State machine variable for virtual input 7
  DIM msnow     ' Holds current time in milliseconds, rolls over every 49 days
                ' Note: currently do not have a roll over condition handler
 
- VERS$="01.0e 20160429"   ' Version of Main Application
+ VERS$="01.1b 20160430"   ' Version of Main Application
  SYSLOG "Analog "+VERS$, 1
 
 '===============================================================================
@@ -70,6 +75,7 @@
   msnow=_TMR_(0)     ' Update current time variable
   IF stateA3=0 THEN GOSUB 3000 ELSE GOSUB 3100
   IF stateA4=0 THEN GOSUB 4000 ELSE GOSUB 4100
+  IF stateA5=0 THEN GOSUB 5000 ELSE GOSUB 5100
 GOTO 100
 
 '===============================================================================
@@ -141,6 +147,40 @@ RETURN
   ELSE                    ' Output is high, but haven't passed hysteresis time
     IF anap4>750 THEN     ' Check to see if input is still high
       delay4=1000+msnow   ' Add another second to the delay
+    ENDIF
+  ENDIF
+RETURN
+
+
+'===============================================================================
+' 5000: State Machine 5 = 0
+'===============================================================================
+
+5000
+  IF IOSTATE(107)<>0 THEN ' Check change of IO state 107
+    IOCTL 215, 1          ' Set the virtual digital register HIGH
+      IF NOT(IOSTATE(205)<>0) THEN 
+        IOCTL 216, 1
+	    SYSLOG "SEND EMAIL CAMERA 11"
+      ENDIF	
+    delay5=5000+msnow     ' Add 1 second to delay
+    stateA5=1             ' Change the state to 1
+  ENDIF
+RETURN
+
+'===============================================================================
+' 5100: State Machine 5 = 1
+'===============================================================================
+
+5100 ' stateA3 = high
+  IF AND(IOSTATE(107)=0,msnow>delay5) THEN  ' Check INPUT is low for > 5 seconds
+    IOCTL 215,0
+	IOCTL 216,0 
+    stateA5=0                 ' Change the state to 0
+    delay5=0                  ' Reset the delay timer
+  ELSE                        ' Output is hi, but haven't passed hysteresis time
+    IF IOSTATE(107)<>0 THEN   ' Check to see if input is still high
+      delay5=5000+msnow       ' Add another second to the delay
     ENDIF
   ENDIF
 RETURN
